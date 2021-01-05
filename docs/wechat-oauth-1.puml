@@ -1,0 +1,60 @@
+@startuml
+
+' https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html
+' https://dalin.blog.csdn.net/article/details/104890768
+' https://plantuml.com/zh/sequence-diagram
+
+' 流程
+' h5 --> weixin --> server(code) --> weixin --> access_token --> weixin --> server(userInfo) --> h5(token) --> server(userInfo)
+
+autonumber
+hide footbox
+title **微信公众号授权登录流程**
+
+' actor "微信用户" as user
+participant "h5应用" as h5
+participant "server服务" as server
+participant "微信授权服务器" as wxOauth
+participant "微信 API" as wxApi
+
+== 授权码模式 ==
+' == 服务端直接获取授权码 code ==
+' user -> h5: 用户访问 H5 应用
+' activate user
+' deactivate user
+
+h5 -> wxOauth: 用户触发登录，重定向到鉴权页面
+activate h5
+deactivate h5
+
+activate wxOauth
+note right of wxOauth: 用户授权
+wxOauth --> server: 授权后回跳 redirect_uri(附带授权 code)
+deactivate wxOauth
+
+activate server
+note right of server: url参数获取授权 code（存储 H5 回跳地址）
+server -> wxApi: 使用 code/appid/appsecret 换取 access_token
+activate wxApi
+note right of wxApi: 微信验证
+wxApi --> server: 下发 access_token/refresh_token && openid
+note right of server: 缓存处理 access_token，必要时刷新 refresh_token
+note right of server: 静默授权只能获取 openid，流程到此为止
+server -> wxApi: 通过 access_token/refresh_token 换取用户授权信息
+wxApi --> server: 微信返回授权信息
+note right of server: 主动授权可获取用户信息
+note right of server: 注册用户，回跳 H5 地址
+deactivate wxApi
+server --> h5: 回跳 h5 页面 (附带 token)
+deactivate server
+
+activate h5
+h5 -> server: H5 使用 token请求用户信息
+activate server
+server --> h5: 返回用户信息
+deactivate server
+deactivate h5
+
+...
+
+@enduml

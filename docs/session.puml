@@ -1,0 +1,26 @@
+actor APP用户
+
+title 验证session过程
+
+
+activate APP用户
+APP用户 -> h5应用: 访问H5页面 url
+h5应用 -> webstarter : 拦截页面请求
+webstarter -> webstarter : 取query 中参数、存到redis、ParameterThreadLocal
+webstarter -> sercurityservice : /sercurityservice/shuhePk
+sercurityservice --> webstarter :  返回 公钥，用来加密token
+webstarter -> user : /user/verifySession，ParameterThreadLocal 取session 验证
+user --> 服务端应用 :  session 验证通过
+服务端应用 -> h5应用 :  返回数据
+h5应用 -> APP用户 :  可视页面
+deactivate APP用户
+
+activate user
+user --> h5应用: session 验证不通过
+h5应用 -> APP用户: 唤起客户端登录模块
+APP用户 -> APP用户: 登录并更新 moduleParam，不刷新url
+APP用户 -> h5应用 : url+Query（旧）
+h5应用 -> user : 没有触发redis 重新存储，导致验证时，ParameterThreadLocal 取到的是旧session
+user --> h5应用: session 验证不通过
+h5应用 -> APP用户: 唤起客户端登录模块
+deactivate APP用户
