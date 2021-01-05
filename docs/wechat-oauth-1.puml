@@ -1,11 +1,9 @@
 @startuml
 
 ' https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html
-' https://dalin.blog.csdn.net/article/details/104890768
-' https://plantuml.com/zh/sequence-diagram
 
 ' 流程
-' h5 --> weixin --> server(code) --> weixin --> access_token --> weixin --> server(userInfo) --> h5(token) --> server(userInfo)
+' h5 --> weixin --> server(code) --> weixin --> access_token/openid --> weixin --> server(userInfo) --> h5(token) --> server(userInfo)
 
 autonumber
 hide footbox
@@ -34,16 +32,16 @@ deactivate wxOauth
 
 activate server
 note right of server: url参数获取授权 code（存储 H5 回跳地址）
-server -> wxApi: 使用 code/appid/appsecret 换取 access_token
+server -> wxApi: 通过code换取网页授权access_token
 activate wxApi
 note right of wxApi: 微信验证
-wxApi --> server: 下发 access_token/refresh_token && openid
+wxApi --> server: 下发 access_token/refresh_token
+note right of server: 如果网页授权的作用域为snsapi_base，获取到access_token的同时，也获取到了openid，该流程到此为止
 note right of server: 缓存处理 access_token，必要时刷新 refresh_token
-note right of server: 静默授权只能获取 openid，流程到此为止
 server -> wxApi: 通过 access_token/refresh_token 换取用户授权信息
 wxApi --> server: 微信返回授权信息
 note right of server: 主动授权可获取用户信息
-note right of server: 注册用户，回跳 H5 地址
+note right of server: 注册用户(关联 openid/unionid)，回跳 H5 地址
 deactivate wxApi
 server --> h5: 回跳 h5 页面 (附带 token)
 deactivate server
@@ -53,8 +51,17 @@ h5 -> server: H5 使用 token请求用户信息
 activate server
 server --> h5: 返回用户信息
 deactivate server
-deactivate h5
 
 ...
+
+== 绑定账号 ==
+note right of h5: 需要绑定账号
+h5 -> h5: 绑定账号(手机号，校验码/密码)
+h5 -> server: 上报绑定信息
+activate server
+server --> server: 更新用户信息
+server --> h5: 返回用户信息
+deactivate server
+deactivate h5
 
 @enduml
